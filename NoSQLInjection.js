@@ -1,6 +1,5 @@
 Here is the code with the identified issues fixed:
 
-
 const express = require('express');
 const router = express.Router();
 
@@ -21,11 +20,11 @@ router.post('/customers/register', async (req, res) => {
   const db = client.db(config.MONGODB_DB_NAME);
   const customers = db.collection('customers');
 
-  let myobj = { name: req.body.name, address: req.body.address };
+  let myobj = { name: req.body.name, address: req.body.address }; 
   
   try {
     await customers.insertOne(myobj);
-    res.json({ 
+    res.json({  
       status: 'success',
       message: 'user inserted'
     });
@@ -70,7 +69,7 @@ router.post('/customers/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: 'Email and password are required'
     });
   }
@@ -89,9 +88,9 @@ router.post('/customers/login', async (req, res) => {
   const customers = db.collection('customers');
 
   try {
-    const result = await customers.findOne({ 
+    const result = await customers.findOne({
       email,
-      password 
+      password
     });
     
     res.json(result);
