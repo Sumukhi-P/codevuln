@@ -1,75 +1,105 @@
+Here is the code with the identified issues fixed:
+
+
 const express = require('express');
-const config = require('../config')
-const router = express.Router()
+const router = express.Router();
 
 const MongoClient = require('mongodb').MongoClient;
 const url = config.MONGODB_URI;
 
 router.post('/customers/register', async (req, res) => {
+  const client = await MongoClient.connect(url, {
+    useNewUrlParser: true
+  }).catch(err => {
+    console.log(err);
+  });
 
-    const client = await MongoClient.connect(url, { useNewUrlParser: true })
-        .catch(err => { console.log(err); });
-    if (!client) {
-        return res.json({ status: "Error" });
-    }
-    const db = client.db(config.MONGODB_DB_NAME);
-    const customers = db.collection("customers")
-    
-    let myobj = { name: req.body.name, address: req.body.address };
-    customers.insertOne(myobj, function (err) {
-        if (err) throw err;
-        console.log("user registered");
-        res.json({ status:"success", "message": "user inserted" })
-        db.close();
-    });
-    
-})
+  if (!client) {
+    return res.json({ status: 'Error' });
+  }
 
+  const db = client.db(config.MONGODB_DB_NAME);
+  const customers = db.collection('customers');
 
-// Vulnerable search function
-router.post('/customers/find', async (req, res) => {
-
-    const client = await MongoClient.connect(url, { useNewUrlParser: true })
-        .catch(err => { console.log(err); });
-    if (!client) {
-        return res.json({ status: "Error" });
-    }
-    const db = client.db(config.MONGODB_DB_NAME);
-    const customers = db.collection("customers")
-
-    let name = req.body.name
-    let myobj = { name: name };
-    customers.findOne(myobj, function (err, result) {
-        if (err) throw err;
-        db.close();
-        res.json(result)
-    });
-
+  let myobj = { name: req.body.name, address: req.body.address };
   
-})
+  try {
+    await customers.insertOne(myobj);
+    res.json({ 
+      status: 'success',
+      message: 'user inserted'
+    });
+  } catch (err) {
+    throw err;
+  } finally {
+    db.close();
+  }
+});
 
-// Vulnerable Authentication
-// Authentication Bypass Example
-// curl -X POST http://localhost:3000/customers/login/ --data "{\"email\": {\"\$gt\":\"\"} , \"password\": {\"\$gt\":\"\"}}" -H "Content-Type: application/json"
+router.post('/customers/find', async (req, res) => {
+  const name = req.body.name;
+
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  const client = await MongoClient.connect(url, {
+    useNewUrlParser: true
+  }).catch(err => {
+    console.log(err);
+  });
+
+  if (!client) {
+    return res.json({ status: 'Error' });
+  }
+
+  const db = client.db(config.MONGODB_DB_NAME);
+  const customers = db.collection('customers');
+
+  try {
+    const result = await customers.findOne({ name });
+    res.json(result);
+  } catch (err) {
+    throw err;
+  } finally {
+    db.close();
+  }
+});
 
 router.post('/customers/login', async (req, res) => {
+  const { email, password } = req.body;
 
-    const client = await MongoClient.connect(url, { useNewUrlParser: true })
-        .catch(err => { console.log(err); });
-    if (!client) {
-        return res.json({ status: "Error" });
-    }
-    const db = client.db(config.MONGODB_DB_NAME);
-    const customers = db.collection("customers")
-
-    let myobj = { email: req.body.email, password: req.body.password };
-    customers.findOne(myobj, function (err, result) {
-        if (err) throw err;
-        db.close();
-        res.json(result)
+  if (!email || !password) {
+    return res.status(400).json({ 
+      error: 'Email and password are required'
     });
+  }
 
- 
-})
+  const client = await MongoClient.connect(url, {
+    useNewUrlParser: true    
+  }).catch(err => {
+    console.log(err);
+  });
 
-module.exports = router
+  if(!client) {
+    return res.json({ status: 'Error' });
+  }
+  
+  const db = client.db(config.MONGODB_DB_NAME);  
+  const customers = db.collection('customers');
+
+  try {
+    const result = await customers.findOne({ 
+      email,
+      password 
+    });
+    
+    res.json(result);
+  } catch (err) {
+    throw err;
+  } finally {
+    db.close();
+  }
+});
+
+module.exports = router;
